@@ -1,0 +1,146 @@
+<?php
+	define("CORRECT_RESPONSES","correct_responses");
+	define("INCORRECT_RESPONSES","incorrect_responses");
+	define("DEFAULT_DATA", "/var/www/html/quiz/data/famous_scientists.json");
+	define('PERCENT_CORRECT', 'percent_correct');
+
+	define('ALL', 'all');
+	define('PLAYERS', 'players');
+	define('QUESTIONS', 'questions');
+	define('RESPONSES', 'responses');
+	
+	define('QUESTION_ID', 'questionId');
+	define('IS_CORRECT', 'ic');
+	define('INDEX', 'index');
+	define('PLAYER_ID', 'playerId');
+
+	define('MONGO_ID', '_id');
+	define('QUESTION_TEXT', 'questionText');
+
+	define('QUESTION_INDEX_HEADER', 'Question No');
+	define('QUESTION_TEXT_HEADER', 'Question Text');
+	define('CORRECT_RESPONSES_HEADER', 'Correct Responses');
+	define('INCORRECT_RESPONSES_HEADER', 'Incorrect Responses');
+	define('PERCENT_CORRECT_HEADER', '% Correct');
+	define('PLAYER_NAME_HEADER', 'Player Name');
+	
+	define('DATA', 'DATA');
+	define('HEADER_CLASS_NAME', 'HEADER_CLASS_NAME');
+	define('DATA_CLASS_NAME', 'DATA_CLASS_NAME');
+	define('CLASS_CELL_TEXT', 'cell_text');
+	define('', '');
+	
+	
+
+	function getData($type = ALL,$data = DEFAULT_DATA){
+		$data = json_decode(file_get_contents($data),true);
+		if ($type == ALL) {
+			return $data;
+		}else {
+			return $data[$type];
+		}
+	}
+
+	function getList($questions,$responses,$type){
+		$questionHashMap = questionHashMap($questions);
+		if ($type == PLAYERS) {
+			return getPlayersData($questionHashMap, $responses);
+		}else if($type == QUESTIONS){
+			return getQuestionsData($questionHashMap, $responses);
+		}
+	}
+
+
+	function getKey($questionHashMap, $response) {
+		$questionID = $response[QUESTION_ID];
+		$question = $questionHashMap[$questionID];
+		$key = (empty($response[IS_CORRECT])) ? INCORRECT_RESPONSES : CORRECT_RESPONSES;
+		return $key;
+	}
+
+	function getPlayerIDList($responses) {
+		$playerIDArray = array_values(array_unique(array_column($responses, PLAYER_ID)));
+		return $playerIDArray;
+	}
+
+	function getPlayersData($questionHashMap, $responses) {
+		$playerIDArray = getPlayerIDList($responses);
+		$playerList = array_fill_keys($playerIDArray, emptyQuestionResponseData());
+
+		foreach ($responses as $response) {
+			$key = getKey($questionHashMap, $response);
+			$playerList[$response[PLAYER_ID]][$key]+=1;
+		}
+		
+		foreach ($playerList as $key => $value) {
+			$playerList[$key][PERCENT_CORRECT] = getCorrectPercent($value);
+			$playerList[$key][PLAYER_ID] = $key;
+		}
+		return $playerList;
+	}
+
+
+	function getQuestionsData($questionHashMap, $responses) {
+		foreach ($responses as $response) {
+			$key = getKey($questionHashMap, $response);
+			$questionHashMap[$response[QUESTION_ID]][$key] += 1;
+		}
+
+		foreach ($questionHashMap as $key => $question) {
+			$questionHashMap[$key][PERCENT_CORRECT] = getCorrectPercent($question);
+		}
+		return $questionHashMap;
+	}
+
+
+	function questionHashMap($questionArray) {
+		$questionHashMap = array();
+		foreach($questionArray as $key => $question) {
+			$question[INDEX] = $key + 1;
+			$question = array_merge($question, emptyQuestionResponseData());
+			$questionHashMap[$question[MONGO_ID]] = $question;
+		}
+		return $questionHashMap;
+	}
+
+	function getCorrectPercent($data) {
+		return ($data[CORRECT_RESPONSES]/($data[INCORRECT_RESPONSES] + $data[CORRECT_RESPONSES])) * 100;
+	}
+
+	function emptyQuestionResponseData() {
+		return array(CORRECT_RESPONSES => 0, INCORRECT_RESPONSES => 0);
+	}
+
+	function getQuestionResponseHashMap($responses, $questions) {
+		$hashMap = array();
+		$questionHashMap = questionHashMap($questions);
+
+		foreach ($responses as $response) {
+			$questionId = $response[QUESTION_ID];
+			$playerId = $response[PLAYER_ID];
+			$hashMap[$questionId][$playerId] = $response[IS_CORRECT] ? "<div class= 'fa fa-check'> </div>" : "<div class= 'fa fa-times'> </div>";
+			$hashMap[$questionId][QUESTION_TEXT] = $questionHashMap[$questionId][QUESTION_TEXT];
+		}
+		return $hashMap;
+	}
+
+	function printTable($data, $headers, $class = "striped") {
+
+		echo "<table class = \"$class\">";
+		echo "<tr>";
+		foreach ($headers as $header => $headerData) {
+			echo "<th class = '".$headerData[HEADER_CLASS_NAME]."'>".$header."</th>";
+		}
+		echo "</tr>";
+
+		foreach ($data as $index => $value) {
+			echo "<tr>";
+			foreach ($headers as $header => $headerData) {
+				$key = $headerData[DATA];
+				echo "<td class = '".$headerData[DATA_CLASS_NAME]."'>".$value[$key]."</td>";
+			}
+			echo "</tr>";
+		}
+		echo "</table>";
+	}
+?>
