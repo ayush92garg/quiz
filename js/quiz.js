@@ -9,7 +9,7 @@ $( "#fb-submit" ).click(function() {
 		  		content:content
 		  	}, 
 		  	success: function(result){
-		        alert("email details has been sent");
+		        alert("Thank you for your feedback");
 		    }
 		});
 	}else{
