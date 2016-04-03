@@ -1,0 +1,5 @@
+RewriteEngine On
+RewriteRule ^index.php /quiz/views/lists [R=301]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^\.]+)$ $1.php [NC,L]
+RewriteRule ^/charts /charts.php#graph1 [NE,R]
